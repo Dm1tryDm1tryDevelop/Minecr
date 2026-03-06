@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>My Craft Parody</title>
+    <style>
+        body { margin: 0; overflow: hidden; font-family: sans-serif; }
+        #crosshair {
+            position: absolute; top: 50%; left: 50%;
+            width: 20px; height: 20px;
+            border: 2px solid white; border-radius: 50%;
+            transform: translate(-50%, -50%); pointer-events: none;
+        }
+        #ui {
+            position: absolute; bottom: 20px; left: 50%;
+            transform: translateX(-50%);
+            display: flex; gap: 10px; background: rgba(0,0,0,0.5);
+            padding: 10px; border-radius: 10px;
+        }
+        .slot { width: 40px; height: 40px; border: 2px solid #555; background: #888; }
+        .active { border-color: yellow; }
+    </style>
+</head>
+<body>
+    <div id="crosshair"></div>
+    <div id="ui">
+        <div class="slot active"></div>
+        <div class="slot"></div>
+        <div class="slot"></div>
+    </div>
+
+    <script type="module">
+        import * as THREE from 'https://cdn.skypack.dev/three@0.136.0';
+
+        // --- Инициализация сцены ---
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x87CEEB); // Небо
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+
+        // --- Свет ---
+        const light = new THREE.HemisphereLight(0xffffff, 0x000000, 1);
+        scene.add(light);
+
+        // --- Генерация мира (Упрощенная) ---
+        const boxGeo = new THREE.BoxGeometry(1, 1, 1);
+        const textureLoader = new THREE.TextureLoader();
+        const grassMat = new THREE.MeshStandardMaterial({ color: 0x44aa44 });
+        const dirtMat = new THREE.MeshStandardMaterial({ color: 0x8b4513 });
+
+        const worldSize = 10;
+        for (let x = -worldSize; x < worldSize; x++) {
+            for (let z = -worldSize; z < worldSize; z++) {
+                const height = Math.floor(Math.random() * 2); // Простая неровность
+                for (let y = 0; y <= height; y++) {
+                    const block = new THREE.Mesh(boxGeo, y === height ? grassMat : dirtMat);
+                    block.position.set(x, y, z);
+                    scene.add(block);
+                }
+            }
+        }
+
+        // --- Управление ---
+        camera.position.set(0, 5, 5);
+        
+        // Логика "Добычи" (Raycasting)
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2(0, 0); // Центр экрана
+
+        window.addEventListener('pointerdown', () => {
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObjects(scene.children);
+            if (intersects.length > 0) {
+                const object = intersects[0].object;
+                // Анимация "выпадения" (простое исчезновение для примера)
+                scene.remove(object);
+            }
+        });
+
+        // Движение камеры (для телефона - вращение при касании)
+        let isDragging = false;
+        let previousMouseX = 0;
+        window.addEventListener('pointermove', (e) => {
+            if (e.pointerType === 'touch' || isDragging) {
+                camera.rotation.y -= (e.movementX || 0) * 0.005;
+            }
+        });
+
+        function animate() {
+            requestAnimationFrame(animate);
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        // Адаптация под размер экрана
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+</html>
